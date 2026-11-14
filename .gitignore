@@ -1,0 +1,15 @@
+**/target/
+**/data/
+/.m2-local/
+/.idea/
+*.iml
+.env
+.env.*
+!.env.example
+*.mv.db
+*.trace.db
+*.log
+*.pem
+*.key
+*.p12
+*.pfx

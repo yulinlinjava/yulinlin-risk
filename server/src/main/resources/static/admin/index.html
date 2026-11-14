@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>行为风控管理</title>
+    <link rel="stylesheet" href="/admin/admin.css">
+    <script src="/admin/admin.js" defer></script>
+</head>
+<body>
+<header class="top">
+    <a class="brand" href="/admin/">行为风控 <span>Admin</span></a>
+    <nav aria-label="管理功能">
+        <button type="button" data-tab="projects" aria-current="page">项目管理</button>
+        <button type="button" data-tab="analysis">用户行为分析</button>
+        <button type="button" data-tab="event-log">事件</button>
+        <button type="button" data-tab="blacklist">黑名单</button>
+    </nav>
+    <button type="button" id="logout" class="quiet">退出</button>
+</header>
+<main>
+    <div class="context"><label for="project-select">当前项目</label><select id="project-select" aria-label="当前项目"></select></div>
+    <p id="message" role="status" hidden></p>
+
+    <section id="projects" class="panel">
+        <h1>项目管理</h1>
+        <p class="muted">为业务系统创建项目，在表格中复制 API Key，调用业务接口时放入 <code>X-API-Key</code> 请求头。</p>
+        <form id="create-project" class="controls">
+            <label>项目名称<input name="name" required maxlength="100" placeholder="例如 视频业务"></label>
+            <button class="primary">新建项目</button>
+        </form>
+        <div class="table-wrap"><table class="projects-table"><thead><tr><th>项目名称</th><th>项目 ID</th><th>API Key</th><th>创建时间</th><th>操作</th></tr></thead>
+            <tbody id="project-rows"></tbody></table></div>
+    </section>
+
+    <section id="analysis" class="panel" hidden>
+        <h1>用户行为分析</h1>
+        <p class="muted">汇总同一用户在已接入接口上的行为，分析跨接口风险。统计保留最近 24 小时，事件明细和抽样片段保留最近 12 小时。</p>
+        <form id="analysis-filters" class="controls">
+            <label>开始时间<input id="from" type="datetime-local" step="1" required></label>
+            <label>结束时间<input id="to" type="datetime-local" step="1" required></label>
+            <label>请求次数大于<input id="min-count" type="number" min="0" step="1" value="0" required></label>
+            <label>用户 ID<input id="filter-user" maxlength="128" placeholder="输入 ID 直接查询"></label>
+            <button class="primary">查询</button>
+            <button type="button" id="direct-report">查看报告</button>
+        </form>
+        <div class="range-actions"><button type="button" data-hours="24">最近 24 小时</button><button type="button" data-hours="6">最近 6 小时</button><button type="button" data-hours="1">最近 1 小时</button></div>
+        <div class="table-wrap"><table><thead><tr><th>用户 ID</th><th>请求次数</th><th>已记录分类</th><th>异常响应</th><th>风险</th><th>黑名单</th><th>操作</th></tr></thead>
+            <tbody id="analysis-rows"></tbody></table></div>
+        <div id="analysis-pager" class="pager"></div>
+
+        <section id="report" class="report" hidden aria-labelledby="report-title">
+            <div class="report-heading"><h2 id="report-title">用户综合分析</h2><button type="button" id="close-report" class="quiet">关闭</button></div>
+            <p id="report-status" class="muted"></p>
+            <p id="report-coverage" class="notice"></p>
+            <p id="report-data-notes" class="muted"></p>
+            <dl id="report-metrics" class="metrics"></dl>
+            <div class="report-grid">
+                <section aria-labelledby="actions-title">
+                    <h3 id="actions-title">接口行为分布</h3>
+                    <div class="table-wrap"><table><thead><tr><th>行为</th><th>请求次数</th><th>占比</th></tr></thead>
+                        <tbody id="action-rows"></tbody></table></div>
+                </section>
+                <section aria-labelledby="trend-title">
+                    <h3 id="trend-title">5 分钟访问趋势</h3>
+                    <div class="table-wrap trend-wrap"><table><thead><tr><th>时段开始</th><th>请求次数</th><th>异常响应</th><th>相对请求量</th></tr></thead>
+                        <tbody id="trend-rows"></tbody></table></div>
+                </section>
+            </div>
+            <h3>风险证据</h3>
+            <p class="muted">命中表示疑似恶意，需要结合业务复核；无命中不表示已证明正常。</p>
+            <div class="table-wrap"><table><thead><tr><th>时间</th><th>规则</th><th>命中原因</th></tr></thead>
+                <tbody id="evidence-rows"></tbody></table></div>
+            <button type="button" id="report-block" class="danger">加入黑名单</button>
+            <h3>抽样请求与异常片段</h3>
+            <p class="muted">仅展示最近 12 小时保留的抽样请求和异常片段，数量不等于请求总量。完整的已接收上报事件可在“事件”页面查看。</p>
+            <div class="table-wrap"><table class="events-table"><thead><tr><th>发生时间</th><th>行为</th><th>请求 URL</th><th>资源</th><th>IP 地址</th><th>响应状态</th><th>保留类型</th><th>事件 ID</th></tr></thead>
+                <tbody id="event-rows"></tbody></table></div>
+            <div id="event-pager" class="pager"></div>
+        </section>
+    </section>
+
+    <section id="event-log" class="panel" hidden>
+        <h1>事件</h1>
+        <p class="muted">查看当前项目最近 12 小时内已接收的 v2 上报事件，过期事件自动清理。仅包含业务已接入并成功上报的请求。</p>
+        <p class="muted">完整事件从本次升级后开始记录，升级前的抽样片段不会补入此列表。</p>
+        <form id="event-log-filters" class="controls">
+            <label>用户 ID<input id="event-log-user" maxlength="128" placeholder="留空查看全部用户"></label>
+            <label>每页条数<select id="event-log-page-size"><option value="50">50 条</option><option value="100">100 条</option><option value="200">200 条</option></select></label>
+            <button class="primary">查询</button>
+            <button type="button" id="event-log-refresh">刷新最近事件</button>
+        </form>
+        <p id="event-log-range" class="muted"></p>
+        <div class="table-wrap"><table class="event-log-table"><thead><tr><th>发生时间</th><th>用户 ID</th><th>资源 ID</th><th>IP 地址</th><th>请求 URL</th><th>行为</th><th>事件 ID</th></tr></thead>
+            <tbody id="event-log-rows"></tbody></table></div>
+        <div id="event-log-pager" class="pager"></div>
+    </section>
+
+    <section id="blacklist" class="panel" hidden>
+        <h1>黑名单</h1>
+        <p class="muted">黑名单按项目生效，业务方可通过分页接口同步本地缓存。</p>
+        <form id="add-blacklist" class="controls">
+            <label>用户 ID<input id="blacklist-user" name="userId" required maxlength="128"></label>
+            <label>加入原因<input name="reason" required maxlength="500" placeholder="记录人工复核依据"></label>
+            <button class="primary">加入黑名单</button>
+        </form>
+        <div class="table-wrap"><table><thead><tr><th>用户 ID</th><th>加入原因</th><th>加入时间</th><th>操作</th></tr></thead>
+            <tbody id="blacklist-rows"></tbody></table></div>
+        <div id="blacklist-pager" class="pager"></div>
+    </section>
+</main>
+</body>
+</html>

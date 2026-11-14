@@ -1,0 +1,43 @@
+server:
+  address: ${RISK_BIND_ADDRESS:127.0.0.1}
+  port: ${RISK_PORT:8080}
+  shutdown: graceful
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: strict
+        secure: ${RISK_SECURE_COOKIE:false}
+spring:
+  application:
+    name: yulinlin-risk
+  mvc:
+    problemdetails:
+      enabled: true
+    async:
+      request-timeout: 15s
+  datasource:
+    url: jdbc:h2:file:${RISK_DB_FILE:./data/risk};DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=3000
+    username: sa
+    password: ${RISK_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 8
+      connection-timeout: 3000
+  h2:
+    console:
+      enabled: false
+yulinlin:
+  security:
+    limit:
+      # Direct connections use the socket IP; configure actual proxy addresses when deployed behind a proxy.
+      trusted-proxies: []
+risk:
+  batch-size: 128
+  batch-wait-ms: 4
+  queue-capacity: 4096
+  max-subjects: 10000
+  recovery-limit: 20000
+  report-limit: 50000
+  analytics-concurrency: 2
+  online-max-delay: 30s

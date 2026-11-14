@@ -1,0 +1,23 @@
+server:
+  address: 127.0.0.1
+  port: 8081
+  forward-headers-strategy: none
+
+# 演示项目使用 Spring Security 默认登录/HTTP Basic，用户名即稳定的业务用户 ID。
+# 已有业务项目继续使用自己的登录体系，无需复制这一段演示账号配置。
+spring:
+  security:
+    user:
+      name: "10001"
+      password: ${DEMO_USER_PASSWORD}
+
+yulinlin:
+  risk:
+    enabled: true
+    base-url: ${RISK_BASE_URL:http://127.0.0.1:8080}
+    api-key: ${RISK_API_KEY}
+    queue-capacity: 4096
+    batch-size: 100
+    flush-interval: 1s
+    # 每轮同步结束后等待 60 秒；版本未变跳过后续分页，失败保留旧缓存，不按此时间清空。
+    blacklist-refresh-interval: 60s
